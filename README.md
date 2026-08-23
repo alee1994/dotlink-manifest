@@ -49,6 +49,20 @@ pipe filter:
 $ find ~/dotfiles -type l -printf '%p -> %l\n' | dlm -from arrow -to jsonl | jq .
 ```
 
+`dlm` can also walk a directory tree itself instead of going through
+`find`, with `-scan`:
+
+```
+$ dlm -scan ~/dotfiles -to arrow
+~/dotfiles/.vimrc -> vim/vimrc
+~/dotfiles/.bashrc -> shell/bashrc
+```
+
+`-scan` reports whatever `os.Readlink` returns for each link, so a
+relative target (as `stow` and `dotbot` both create) comes out relative,
+exactly as it's stored on disk. It can't be combined with `-from` or
+`-in`, since there's no manifest to read in that mode.
+
 ## streaming
 
 Conversion is line-by-line: `dlm` never holds more than one entry in
@@ -58,8 +72,6 @@ does - constant memory, one pass over the input.
 
 ## current limitations
 
-- No built-in filesystem scanning yet - pipe manifest generation
-  through `find` (see roadmap).
 - The arrow format has no escaping, so a path that itself contains the
   literal string `" -> "` will not round-trip correctly.
 - Nothing here creates or removes symlinks; `dlm` only converts the

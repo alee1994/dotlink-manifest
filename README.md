@@ -63,6 +63,19 @@ relative target (as `stow` and `dotbot` both create) comes out relative,
 exactly as it's stored on disk. It can't be combined with `-from` or
 `-in`, since there's no manifest to read in that mode.
 
+The other direction, `-apply`, reads a manifest and creates the symlinks
+it describes:
+
+```
+$ dlm -apply -from arrow -in links.txt
+```
+
+A `Link` path that already exists and isn't already the correct symlink
+is left alone and reported as an error, rather than being overwritten -
+pass `-force` to replace it instead. A link that's already correct is
+skipped, so re-running `-apply` on a manifest you've already applied is
+a no-op. `-apply` can't be combined with `-to`, `-out`, or `-scan`.
+
 ## streaming
 
 Conversion is line-by-line: `dlm` never holds more than one entry in
@@ -74,8 +87,9 @@ does - constant memory, one pass over the input.
 
 - The arrow format has no escaping, so a path that itself contains the
   literal string `" -> "` will not round-trip correctly.
-- Nothing here creates or removes symlinks; `dlm` only converts the
-  manifest that describes them.
+- `-apply` only creates symlinks; there's no `dlm` command yet to remove
+  the ones a manifest describes, or to flag links whose target is gone
+  (a dangling link).
 
 ## license
 

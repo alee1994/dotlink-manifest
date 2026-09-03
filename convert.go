@@ -72,14 +72,19 @@ func ConvertStream(r io.Reader, w io.Writer, from, to Format) error {
 func decodeEntry(line string, from Format) (Entry, error) {
 	switch from {
 	case Arrow:
-		i := strings.Index(line, arrowSep)
-		if i < 0 {
-			return Entry{}, fmt.Errorf("missing %q separator: %s", arrowSep, line)
+		i, err := findArrowSep(line)
+		if err != nil {
+			return Entry{}, err
 		}
-		return Entry{
-			Link:   strings.TrimSpace(line[:i]),
-			Target: strings.TrimSpace(line[i+len(arrowSep):]),
-		}, nil
+		link, err := unescapeArrow(strings.TrimSpace(line[:i]))
+		if err != nil {
+			return Entry{}, err
+		}
+		target, err := unescapeArrow(strings.TrimSpace(line[i+len(arrowSep):]))
+		if err != nil {
+			return Entry{}, err
+		}
+		return Entry{Link: link, Target: target}, nil
 	case JSONL:
 		var e Entry
 		if err := json.Unmarshal([]byte(line), &e); err != nil {
@@ -91,10 +96,67 @@ func decodeEntry(line string, from Format) (Entry, error) {
 	}
 }
 
+// findArrowSep returns the index of the first arrowSep in line that isn't
+// escaped, skipping over "\\" and "\ -> " so an escaped separator or
+// backslash embedded in a path doesn't get mistaken for the real one.
+func findArrowSep(line string) (int, error) {
+	for i := 0; i < len(line); i++ {
+		if line[i] != '\\' {
+			if strings.HasPrefix(line[i:], arrowSep) {
+				return i, nil
+			}
+			continue
+		}
+		if strings.HasPrefix(line[i+1:], arrowSep) {
+			i += len(arrowSep)
+			continue
+		}
+		if i+1 < len(line) && line[i+1] == '\\' {
+			i++
+			continue
+		}
+		return -1, fmt.Errorf(`stray backslash (use \\ for a literal backslash): %s`, line)
+	}
+	return -1, fmt.Errorf("missing %q separator: %s", arrowSep, line)
+}
+
+// unescapeArrow reverses escapeArrow: "\\" becomes "\" and an escaped
+// separator becomes a literal arrowSep again.
+func unescapeArrow(s string) (string, error) {
+	var sb strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] != '\\' {
+			sb.WriteByte(s[i])
+			continue
+		}
+		switch {
+		case strings.HasPrefix(s[i+1:], arrowSep):
+			sb.WriteString(arrowSep)
+			i += len(arrowSep)
+		case i+1 < len(s) && s[i+1] == '\\':
+			sb.WriteByte('\\')
+			i++
+		default:
+			return "", fmt.Errorf(`stray backslash (use \\ for a literal backslash): %s`, s)
+		}
+	}
+	return sb.String(), nil
+}
+
+// escapeArrow makes s safe to write as one side of an arrow-format line: a
+// literal backslash is doubled, and a literal occurrence of arrowSep is
+// prefixed with a backslash so it can't be confused with the real
+// separator when the line is read back.
+func escapeArrow(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, arrowSep, `\`+arrowSep)
+	return s
+}
+
 func encodeEntry(w io.Writer, e Entry, to Format) error {
 	switch to {
 	case Arrow:
-		_, err := fmt.Fprintf(w, "%s%s%s\n", e.Link, arrowSep, e.Target)
+		_, err := fmt.Fprintf(w, "%s%s%s\n", escapeArrow(e.Link), arrowSep, escapeArrow(e.Target))
 		return err
 	case JSONL:
 		b, err := json.Marshal(e)

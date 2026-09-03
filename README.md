@@ -83,10 +83,17 @@ memory. A manifest generated from `find /` or from a machine with tens
 of thousands of managed dotfiles converts the same way a five-line one
 does - constant memory, one pass over the input.
 
+## escaping
+
+A path that itself contains the literal string `" -> "` or a backslash
+still round-trips through the arrow format: `dlm` writes a backslash
+before an embedded separator (`\ -> `) and doubles a literal backslash
+(`\\`) when it converts to arrow, and reverses both on the way back. You
+only need to know this if you're hand-editing an arrow file - anything
+`dlm` itself writes and reads back needs no attention from you.
+
 ## current limitations
 
-- The arrow format has no escaping, so a path that itself contains the
-  literal string `" -> "` will not round-trip correctly.
 - `-apply` only creates symlinks; there's no `dlm` command yet to remove
   the ones a manifest describes, or to flag links whose target is gone
   (a dangling link).

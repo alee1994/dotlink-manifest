@@ -76,6 +76,23 @@ pass `-force` to replace it instead. A link that's already correct is
 skipped, so re-running `-apply` on a manifest you've already applied is
 a no-op. `-apply` can't be combined with `-to`, `-out`, or `-scan`.
 
+`-check` reads a manifest and reports entries whose target doesn't exist
+on disk, without touching anything:
+
+```
+$ dlm -check -from arrow -in links.txt
+~/.vimrc -> dotfiles/vim/vimrc
+```
+
+A relative `Target` is resolved against the directory containing `Link`,
+the same way the filesystem resolves it when it actually follows the
+symlink - not against dlm's current directory. `-check` exits non-zero
+if it found at least one dangling entry, so it works as a CI step or
+pre-commit hook; it works whether or not the manifest has been applied
+yet, since it only asks whether `Target` exists. `-check` can be
+combined with `-out` to write the dangling entries to a file instead of
+stdout, but not with `-to` or `-scan`.
+
 ## streaming
 
 Conversion is line-by-line: `dlm` never holds more than one entry in
@@ -95,8 +112,9 @@ only need to know this if you're hand-editing an arrow file - anything
 ## current limitations
 
 - `-apply` only creates symlinks; there's no `dlm` command yet to remove
-  the ones a manifest describes, or to flag links whose target is gone
-  (a dangling link).
+  the ones a manifest describes.
+- jsonl has no notion of stow-style package grouping - every entry is
+  flat, with no way to say "these ten links came from the same package".
 
 ## license
 

@@ -25,10 +25,17 @@ func ParseFormat(s string) (Format, error) {
 	}
 }
 
-// Entry is one symlink: Link points at Target.
+// Entry is one symlink: Link points at Target. Package is an optional
+// stow-style grouping label - the name of the package (e.g. "vim",
+// "shell") that owns this link, letting a manifest generated from a
+// stow directory keep track of which links came from the same package
+// without splitting into one manifest per package. The arrow format has
+// no column for it, so a Package survives conversion to jsonl but is
+// dropped when converting to arrow.
 type Entry struct {
-	Link   string `json:"link"`
-	Target string `json:"target"`
+	Link    string `json:"link"`
+	Target  string `json:"target"`
+	Package string `json:"package,omitempty"`
 }
 
 const arrowSep = " -> "

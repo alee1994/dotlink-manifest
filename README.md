@@ -32,6 +32,17 @@ whichever one a given step needs:
   {"link":"~/.bashrc","target":"dotfiles/shell/bashrc"}
   ```
 
+  An entry can carry an optional `package` field, naming the stow-style
+  package (`vim`, `shell`, ...) it came from:
+
+  ```
+  {"link":"~/.vimrc","target":"dotfiles/vim/vimrc","package":"vim"}
+  ```
+
+  `package` is jsonl-only - the arrow format has no column for it, so it's
+  dropped when an entry is converted to arrow, and arrow entries always
+  come out with no package set.
+
 ## usage
 
 ```
@@ -113,8 +124,6 @@ only need to know this if you're hand-editing an arrow file - anything
 
 - `-apply` only creates symlinks; there's no `dlm` command yet to remove
   the ones a manifest describes.
-- jsonl has no notion of stow-style package grouping - every entry is
-  flat, with no way to say "these ten links came from the same package".
 
 ## license
 

@@ -95,6 +95,47 @@ func TestConvertArrowEscapesLiteralBackslash(t *testing.T) {
 	}
 }
 
+func TestConvertJSONLPackageRoundTrips(t *testing.T) {
+	in := `{"link":"~/.vimrc","target":"dotfiles/vim/vimrc","package":"vim"}` + "\n"
+	var out strings.Builder
+
+	if err := ConvertStream(strings.NewReader(in), &out, JSONL, JSONL); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != in {
+		t.Errorf("got %q, want %q", out.String(), in)
+	}
+}
+
+func TestConvertJSONLWithoutPackageOmitsField(t *testing.T) {
+	in := `{"link":"~/.vimrc","target":"dotfiles/vim/vimrc"}` + "\n"
+	var out strings.Builder
+
+	if err := ConvertStream(strings.NewReader(in), &out, JSONL, JSONL); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != in {
+		t.Errorf("got %q, want %q", out.String(), in)
+	}
+	if strings.Contains(out.String(), "package") {
+		t.Errorf("expected no package field, got %q", out.String())
+	}
+}
+
+func TestConvertPackageDroppedGoingToArrow(t *testing.T) {
+	in := `{"link":"~/.vimrc","target":"dotfiles/vim/vimrc","package":"vim"}` + "\n"
+	var out strings.Builder
+
+	if err := ConvertStream(strings.NewReader(in), &out, JSONL, Arrow); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "~/.vimrc -> dotfiles/vim/vimrc\n"
+	if out.String() != want {
+		t.Errorf("got %q, want %q", out.String(), want)
+	}
+}
+
 func TestConvertArrowStrayBackslashIsError(t *testing.T) {
 	in := `~/foo\bar -> target` + "\n"
 	var out strings.Builder

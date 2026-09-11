@@ -14,19 +14,26 @@ func main() {
 	out := flag.String("out", "", "output file (default stdout)")
 	scan := flag.String("scan", "", "scan this directory tree for symlinks instead of reading a manifest with -from/-in")
 	apply := flag.Bool("apply", false, "create the symlinks described by a manifest read with -from/-in, instead of converting")
+	remove := flag.Bool("remove", false, "remove the symlinks described by a manifest read with -from/-in, instead of converting")
 	check := flag.Bool("check", false, "report manifest entries read with -from/-in whose target doesn't exist, instead of converting")
-	force := flag.Bool("force", false, "with -apply, replace a Link path that already exists")
+	force := flag.Bool("force", false, "with -apply, replace a Link path that already exists; with -remove, remove it even if it doesn't match Target")
 	flag.Parse()
 
-	if err := run(*from, *to, *in, *out, *scan, *apply, *check, *force); err != nil {
+	if err := run(*from, *to, *in, *out, *scan, *apply, *remove, *check, *force); err != nil {
 		fmt.Fprintln(os.Stderr, "dlm:", err)
 		os.Exit(1)
 	}
 }
 
-func run(fromName, toName, inPath, outPath, scanPath string, apply, check, force bool) error {
+func run(fromName, toName, inPath, outPath, scanPath string, apply, remove, check, force bool) error {
 	if apply && check {
 		return fmt.Errorf("-apply and -check can't be combined")
+	}
+	if apply && remove {
+		return fmt.Errorf("-apply and -remove can't be combined")
+	}
+	if remove && check {
+		return fmt.Errorf("-remove and -check can't be combined")
 	}
 
 	if apply {
@@ -47,8 +54,26 @@ func run(fromName, toName, inPath, outPath, scanPath string, apply, check, force
 		return ApplyManifest(r, from, force)
 	}
 
+	if remove {
+		if toName != "" || outPath != "" || scanPath != "" {
+			return fmt.Errorf("-remove can't be combined with -to, -out, or -scan")
+		}
+		from, err := ParseFormat(fromName)
+		if err != nil {
+			return fmt.Errorf("-from: %w", err)
+		}
+
+		r, closeR, err := openInput(inPath)
+		if err != nil {
+			return err
+		}
+		defer closeR()
+
+		return RemoveManifest(r, from, force)
+	}
+
 	if force {
-		return fmt.Errorf("-force only applies with -apply")
+		return fmt.Errorf("-force only applies with -apply or -remove")
 	}
 
 	if check {

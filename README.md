@@ -87,6 +87,20 @@ pass `-force` to replace it instead. A link that's already correct is
 skipped, so re-running `-apply` on a manifest you've already applied is
 a no-op. `-apply` can't be combined with `-to`, `-out`, or `-scan`.
 
+`-remove` is the reverse: it reads a manifest and removes the symlinks
+it describes.
+
+```
+$ dlm -remove -from arrow -in links.txt
+```
+
+A `Link` that's already gone is left alone, so re-running `-remove` on a
+manifest you've already removed is a no-op. A `Link` that's a symlink
+but doesn't point at `Target`, or that exists but isn't a symlink at
+all, is left alone and reported as an error - pass `-force` to remove
+it regardless of what it currently is. `-remove` can't be combined with
+`-to`, `-out`, or `-scan`.
+
 `-check` reads a manifest and reports entries whose target doesn't exist
 on disk, without touching anything:
 
@@ -119,11 +133,6 @@ before an embedded separator (`\ -> `) and doubles a literal backslash
 (`\\`) when it converts to arrow, and reverses both on the way back. You
 only need to know this if you're hand-editing an arrow file - anything
 `dlm` itself writes and reads back needs no attention from you.
-
-## current limitations
-
-- `-apply` only creates symlinks; there's no `dlm` command yet to remove
-  the ones a manifest describes.
 
 ## license
 
